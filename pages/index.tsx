@@ -160,6 +160,7 @@ export const getStaticProps: GetStaticProps<IHomeProps> = async (context) => {
       targetCountry,
       countryMetadata,
     },
+    revalidate: 3600, // Regenerate site every hour
   };
 };
 
