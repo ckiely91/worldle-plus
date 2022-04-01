@@ -210,7 +210,7 @@ const getShareText = (
     }
   }
 
-  str += "\nhttp://worldle-plus.vercel.app";
+  str += "\nhttps://worldle.acrofever.com";
 
   return str;
 };

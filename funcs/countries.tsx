@@ -6,7 +6,7 @@ import {
 } from "topojson-client";
 import { GeometryCollection, Topology } from "topojson-specification";
 import { renderToStaticMarkup } from "react-dom/server";
-import countryList from "./countryList";
+import countryList from "../data/countryList.json";
 import { DateTime, Interval } from "luxon";
 
 const countriesTopojson = countriesTopojsonJSON as Topology<{
