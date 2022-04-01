@@ -145,22 +145,20 @@ export const getCountryMetadata = (countryName: string): CountryMetadata => {
   };
 };
 
-export const getTodaysCountry = () => {
+export const getTodaysCountry = (): [string, number] => {
   const interval = Interval.fromDateTimes(
     DateTime.fromISO("2022-04-01"),
     DateTime.now()
   );
   const numDays = Math.floor(interval.length("days"));
 
-  return countryList[numDays % countryList.length];
+  return [countryList[numDays % countryList.length], numDays + 1];
 };
 
-// Converts from degrees to radians.
 function toRadians(degrees: number) {
   return (degrees * Math.PI) / 180;
 }
 
-// Converts from radians to degrees.
 function toDegrees(radians: number) {
   return (radians * 180) / Math.PI;
 }
