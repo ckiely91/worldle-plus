@@ -8,6 +8,7 @@ import {
 import { Fragment, useEffect, useState } from "react";
 import Select from "react-select";
 import { getStoredData, Guess, setStoredData } from "../funcs/storage";
+import { first } from "lodash";
 
 interface IHomeProps {
   targetCountry: string;
@@ -175,9 +176,12 @@ const getShareText = (
   correct: boolean,
   guesses: (Guess | null)[]
 ): string => {
-  let str = `#Worldle+ #${worldleNumber} ${
+  let firstLine = `#Worldle+ #${worldleNumber} ${
     correct ? numGuesses : "X"
   }/${numGuessesAllowed}`;
+  let str = "";
+
+  let highestPct = 0;
   for (let i = 0; i < guesses.length; i++) {
     const guess = guesses[i];
     if (!guess) {
@@ -186,6 +190,9 @@ const getShareText = (
 
     str += "\n";
     const dist = getDistPct(guess.distanceKm);
+    if (dist > highestPct) {
+      highestPct = dist;
+    }
 
     const numGreens = Math.floor(dist / 20);
     const numYellows = dist > 90 && dist < 100 ? 1 : 0;
@@ -210,6 +217,10 @@ const getShareText = (
     }
   }
 
+  if (!correct) {
+    firstLine += ` ${highestPct}%`;
+  }
+  str = firstLine + str;
   str += "\nhttps://worldle.acrofever.com";
 
   return str;
