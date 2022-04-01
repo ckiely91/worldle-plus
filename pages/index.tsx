@@ -58,6 +58,7 @@ const Home: NextPage<IHomeProps> = ({
   const options = [];
   for (let i = 0; i < countriesAndDistances.length; i++) {
     const { country } = countriesAndDistances[i];
+
     if (!guesses.find((g) => g?.country === country)) {
       options.push({
         value: country,

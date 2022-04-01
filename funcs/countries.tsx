@@ -122,7 +122,12 @@ export const getCountryMetadata = (countryName: string): CountryMetadata => {
       const distanceInRadians = geoDistance(thisCountryLatLong, countryLatLong);
       const distanceKm = earthRadiusKm * distanceInRadians;
 
-      const bearingDeg = calculateBearing(thisCountryLatLong, countryLatLong);
+      const bearingDeg = calculateBearing(
+        thisCountryLatLong[1],
+        thisCountryLatLong[0],
+        countryLatLong[1],
+        countryLatLong[0]
+      );
 
       return {
         country: thisCountry.properties.name,
@@ -150,12 +155,32 @@ export const getTodaysCountry = () => {
   return countryList[numDays % countryList.length];
 };
 
-// where	φ1,λ1 is the start point, φ2,λ2 the end point (Δλ is the difference in longitude)
-const calculateBearing = (a: [number, number], b: [number, number]) => {
-  const y = Math.sin(b[0] - a[0]) * Math.cos(b[1]);
+// Converts from degrees to radians.
+function toRadians(degrees: number) {
+  return (degrees * Math.PI) / 180;
+}
+
+// Converts from radians to degrees.
+function toDegrees(radians: number) {
+  return (radians * 180) / Math.PI;
+}
+
+function calculateBearing(
+  startLat: number,
+  startLng: number,
+  destLat: number,
+  destLng: number
+) {
+  startLat = toRadians(startLat);
+  startLng = toRadians(startLng);
+  destLat = toRadians(destLat);
+  destLng = toRadians(destLng);
+
+  const y = Math.sin(destLng - startLng) * Math.cos(destLat);
   const x =
-    Math.cos(a[1]) * Math.sin(b[1]) -
-    Math.sin(a[1]) * Math.cos(b[1]) * Math.cos(b[0] - a[0]);
-  const blah = Math.atan2(y, x);
-  return ((blah * 180) / Math.PI + 360) % 360; // in degrees
-};
+    Math.cos(startLat) * Math.sin(destLat) -
+    Math.sin(startLat) * Math.cos(destLat) * Math.cos(destLng - startLng);
+  let brng = Math.atan2(y, x);
+  brng = toDegrees(brng);
+  return (brng + 360) % 360;
+}
