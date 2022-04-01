@@ -147,7 +147,7 @@ export const getCountryMetadata = (countryName: string): CountryMetadata => {
 
 export const getTodaysCountry = (): [string, number] => {
   const interval = Interval.fromDateTimes(
-    DateTime.fromISO("2022-04-01"),
+    DateTime.fromISO("2022-03-31T16:00:00.000Z"),
     DateTime.now()
   );
   const numDays = Math.floor(interval.length("days"));
