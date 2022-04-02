@@ -9,7 +9,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import countryList from "../data/countryList.json";
 import { DateTime, Interval } from "luxon";
 import { Feature } from "geojson";
-import { optimize } from "svgo";
+import { optimize, OptimizedSvg } from "svgo";
 
 const countriesTopojson = countriesTopojsonJSON as unknown as Topology<{
   countries: GeometryCollection<{
@@ -153,7 +153,7 @@ export const getCountryMetadata = (countryName: string): CountryMetadata => {
   );
 
   return {
-    countrySVG: countrySVGStr.data,
+    countrySVG: (countrySVGStr as OptimizedSvg).data,
     countriesAndDistances,
   };
 };
