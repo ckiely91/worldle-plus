@@ -16,6 +16,7 @@
     "react": "18.0.0",
     "react-dom": "18.0.0",
     "react-select": "^5.2.2",
+    "svgo": "^2.8.0",
     "topojson-client": "^3.1.0",
     "yarn": "^1.22.18"
   },
@@ -26,6 +27,7 @@
     "@types/node": "17.0.23",
     "@types/react": "17.0.43",
     "@types/react-dom": "17.0.14",
+    "@types/svgo": "^2.6.3",
     "@types/topojson-client": "^3.1.1",
     "autoprefixer": "^10.4.4",
     "eslint": "8.12.0",
@@ -34,6 +36,7 @@
     "postcss": "^8.4.12",
     "prettier": "^2.6.1",
     "tailwindcss": "^3.0.23",
+    "topojson-server": "^3.0.1",
     "typescript": "4.6.3"
   }
 }

@@ -8,7 +8,6 @@ import {
 import { Fragment, useEffect, useState } from "react";
 import Select from "react-select";
 import { getStoredData, Guess, setStoredData } from "../funcs/storage";
-import { first } from "lodash";
 
 interface IHomeProps {
   targetCountry: string;
@@ -46,7 +45,7 @@ const Home: NextPage<IHomeProps> = ({
 
   const makeGuess = (countryName: string) => {
     const country = countriesAndDistances.find(
-      (c) => c.country === countryName
+      (c) => c.countryName === countryName
     );
     if (!country) {
       throw new Error("made guess not in country list");
@@ -82,12 +81,13 @@ const Home: NextPage<IHomeProps> = ({
 
   const options = [];
   for (let i = 0; i < countriesAndDistances.length; i++) {
-    const { country } = countriesAndDistances[i];
+    const { countryName, countryCode } = countriesAndDistances[i];
 
-    if (!guesses.find((g) => g?.country === country)) {
+    if (!guesses.find((g) => g?.country === countryName)) {
       options.push({
-        value: country,
-        label: country,
+        value: countryName,
+        label: countryName,
+        countryCode: countryCode,
       });
     }
   }
@@ -112,10 +112,7 @@ const Home: NextPage<IHomeProps> = ({
                   {targetCountry}
                 </div>
               )}
-              <div
-                className="svg"
-                dangerouslySetInnerHTML={{ __html: countrySVG }}
-              />
+              <div dangerouslySetInnerHTML={{ __html: countrySVG }} />
             </div>
             <div className="grid grid-cols-7 gap-1 text-center my-2">
               {guesses.map((g, i) =>
@@ -128,7 +125,7 @@ const Home: NextPage<IHomeProps> = ({
                       {g.distanceKm}km
                     </div>
                     <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                      {getBearingDir(g.bearingDeg)[1]}
+                      {!g.correct && getBearingDir(g.bearingDeg)[1]}
                     </div>
                     <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
                       {g.correct ? "🎉" : <>{getDistPct(g.distanceKm)}%</>}
@@ -161,6 +158,22 @@ const Home: NextPage<IHomeProps> = ({
                 isSearchable
                 placeholder="Start typing a country name..."
                 menuPlacement="top"
+                openMenuOnClick={false}
+                formatOptionLabel={(opt) => {
+                  return (
+                    <>
+                      <div className="w-5 mr-2">
+                        {opt.countryCode && (
+                          <img
+                            className="w-5"
+                            src={`https://flagcdn.com/${opt.countryCode.toLowerCase()}.svg`}
+                          />
+                        )}
+                      </div>
+                      {opt.label}
+                    </>
+                  );
+                }}
               />
             )}
           </div>

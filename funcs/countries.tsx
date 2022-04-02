@@ -1,4 +1,4 @@
-import countriesTopojsonJSON from "../data/countries-10m.json";
+import countriesTopojsonJSON from "../data/countries-10m-map-units.json";
 import { geoEquirectangular, geoPath, geoDistance } from "d3-geo";
 import {
   feature as getFeatures,
@@ -8,12 +8,14 @@ import { GeometryCollection, Topology } from "topojson-specification";
 import { renderToStaticMarkup } from "react-dom/server";
 import countryList from "../data/countryList.json";
 import { DateTime, Interval } from "luxon";
+import { Feature } from "geojson";
+import { optimize } from "svgo";
 
-const countriesTopojson = countriesTopojsonJSON as Topology<{
+const countriesTopojson = countriesTopojsonJSON as unknown as Topology<{
   countries: GeometryCollection<{
-    name: string;
+    NAME_EN: string;
+    ISO_A2: string;
   }>;
-  land: GeometryCollection;
 }>;
 
 const geographies = getFeatures(
@@ -29,7 +31,8 @@ const countryScalingFactor = 0.2;
 const earthRadiusKm = 6371;
 
 interface countryAndDistance {
-  country: string;
+  countryName: string;
+  countryCode: string;
   distanceKm: number;
   bearingDeg: number;
 }
@@ -41,10 +44,10 @@ export interface CountryMetadata {
 
 export const getCountryMetadata = (countryName: string): CountryMetadata => {
   // Get the specified country and its neighbours
-  let country;
+  let country: Feature | undefined;
   let thisCountryNeighborIndexes;
   for (let i = 0; i < geographies.length; i++) {
-    const { name } = geographies[i].properties;
+    const { NAME_EN: name } = geographies[i].properties;
     if (name === countryName) {
       country = geographies[i];
       thisCountryNeighborIndexes = neighbors[i];
@@ -92,21 +95,25 @@ export const getCountryMetadata = (countryName: string): CountryMetadata => {
       width="100%"
       height="300"
     >
-      {thisCountryNeighbors.map((c) => (
+      {geographies.map((c) => (
         <path
-          key={c.id}
-          className="neighbour"
+          key={c.properties.ISO_A2}
+          id={`country_${c.properties.ISO_A2}`}
+          className={
+            c.properties.ISO_A2 === country?.properties?.ISO_A2
+              ? "main-country"
+              : "neighbour"
+          }
           vectorEffect="non-scaling-stroke"
           d={pathGenerator(c) || undefined}
         />
       ))}
-      <path
-        className="main-country"
-        vectorEffect="non-scaling-stroke"
-        d={pathGenerator(country) || undefined}
-      />
     </svg>
   );
+
+  const countrySVGStr = optimize(renderToStaticMarkup(countrySVG), {
+    plugins: ["removeOffCanvasPaths", "preset-default"],
+  });
 
   // Now - for each country in the world, calculate its distance to our
   // specified country.
@@ -130,17 +137,23 @@ export const getCountryMetadata = (countryName: string): CountryMetadata => {
       );
 
       return {
-        country: thisCountry.properties.name,
+        countryName: thisCountry.properties.NAME_EN,
+        countryCode:
+          thisCountry.properties.ISO_A2 !== "-99"
+            ? thisCountry.properties.ISO_A2
+            : "",
         distanceKm: Math.round(distanceKm),
         bearingDeg: Math.round(bearingDeg),
       };
     }
   );
 
-  countriesAndDistances.sort((a, b) => a.country.localeCompare(b.country));
+  countriesAndDistances.sort((a, b) =>
+    a.countryName.localeCompare(b.countryName)
+  );
 
   return {
-    countrySVG: renderToStaticMarkup(countrySVG),
+    countrySVG: countrySVGStr.data,
     countriesAndDistances,
   };
 };

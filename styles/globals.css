@@ -16,6 +16,7 @@ body {
 }
 
 .country-svg {
+  width: 100%;
   @apply bg-blue-200 dark:bg-blue-700;
 }
 
@@ -43,7 +44,7 @@ body {
   }
 
   .country-select-container .country-select__option {
-    @apply text-neutral-600 dark:text-neutral-200 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-800;
+    @apply text-neutral-600 dark:text-neutral-200 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-800 flex flex-row items-center;
   }
   /* .country-select-container .country-select__option--is-focused {
     @apply bg-neutral-200 dark:bg-neutral-800;
