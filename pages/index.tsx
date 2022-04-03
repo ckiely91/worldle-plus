@@ -81,12 +81,14 @@ const Home: NextPage<IHomeProps> = ({
 
   const options = [];
   for (let i = 0; i < countriesAndDistances.length; i++) {
-    const { countryName, countryCode } = countriesAndDistances[i];
+    const { countryName, countryCode, sovereignty } = countriesAndDistances[i];
 
     if (!guesses.find((g) => g?.country === countryName)) {
       options.push({
         value: countryName,
-        label: countryName,
+        label: `${countryName}${
+          countryName !== sovereignty ? ` (${sovereignty})` : ""
+        }`,
         countryCode: countryCode,
       });
     }

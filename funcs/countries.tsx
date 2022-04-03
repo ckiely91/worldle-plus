@@ -15,6 +15,7 @@ const countriesTopojson = countriesTopojsonJSON as unknown as Topology<{
   countries: GeometryCollection<{
     NAME_EN: string;
     ISO_A2: string;
+    SOVEREIGNT: string;
   }>;
 }>;
 
@@ -32,6 +33,7 @@ const earthRadiusKm = 6371;
 
 interface countryAndDistance {
   countryName: string;
+  sovereignty: string;
   countryCode: string;
   distanceKm: number;
   bearingDeg: number;
@@ -142,6 +144,7 @@ export const getCountryMetadata = (countryName: string): CountryMetadata => {
           thisCountry.properties.ISO_A2 !== "-99"
             ? thisCountry.properties.ISO_A2
             : "",
+        sovereignty: thisCountry.properties.SOVEREIGNT,
         distanceKm: Math.round(distanceKm),
         bearingDeg: Math.round(bearingDeg),
       };
