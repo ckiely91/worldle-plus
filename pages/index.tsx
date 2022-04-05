@@ -8,6 +8,8 @@ import {
 import { Fragment, useEffect, useState } from "react";
 import Select from "react-select";
 import { getStoredData, Guess, setStoredData } from "../funcs/storage";
+import { Layer, Map, Source } from "react-map-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 interface IHomeProps {
   targetCountry: string;
@@ -18,10 +20,27 @@ interface IHomeProps {
 const numGuessesAllowed = 6;
 const earthAntipodalDistance = 20000;
 
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+const mapStylesNoCountries =
+  "mapbox://styles/ckiely91/cl1legsxf000716o09f0weaf6";
+const mapStylesWithCountries =
+  "mapbox://styles/ckiely91/cl1lixt8i000c16o0bilin9z7";
+
 const Home: NextPage<IHomeProps> = ({
   targetCountry,
   worldleNumber,
-  countryMetadata: { countriesAndDistances, countrySVG },
+  countryMetadata: {
+    countriesAndDistances,
+    countryName,
+    isoCode,
+    latitude,
+    longitude,
+    minLatitude,
+    maxLatitude,
+    minLongitude,
+    maxLongitude,
+  },
 }) => {
   const [guesses, setGuesses] = useState<(Guess | null)[]>(() =>
     new Array(numGuessesAllowed).fill(null)
@@ -43,9 +62,9 @@ const Home: NextPage<IHomeProps> = ({
   const correct = !!guesses.find((g) => g?.correct);
   const completed = correct || numGuesses === numGuessesAllowed;
 
-  const makeGuess = (countryName: string) => {
+  const makeGuess = (countryCode: string) => {
     const country = countriesAndDistances.find(
-      (c) => c.countryName === countryName
+      (c) => c.countryCode === countryCode
     );
     if (!country) {
       throw new Error("made guess not in country list");
@@ -53,10 +72,10 @@ const Home: NextPage<IHomeProps> = ({
 
     const newGuesses = [...guesses];
     newGuesses[numGuesses] = {
-      country: countryName,
+      country: country.countryName,
       distanceKm: country.distanceKm,
       bearingDeg: country.bearingDeg,
-      correct: countryName === targetCountry,
+      correct: countryCode === targetCountry,
     };
 
     setGuesses(newGuesses);
@@ -81,18 +100,31 @@ const Home: NextPage<IHomeProps> = ({
 
   const options = [];
   for (let i = 0; i < countriesAndDistances.length; i++) {
-    const { countryName, countryCode, sovereignty } = countriesAndDistances[i];
+    const { countryName, countryCode } = countriesAndDistances[i];
 
     if (!guesses.find((g) => g?.country === countryName)) {
       options.push({
-        value: countryName,
-        label: `${countryName}${
-          countryName !== sovereignty ? ` (${sovereignty})` : ""
-        }`,
+        value: countryCode,
+        label: countryName,
         countryCode: countryCode,
       });
     }
   }
+
+  const countryHighlight = (
+    <Source type="vector" url="mapbox://mapbox.country-boundaries-v1">
+      <Layer
+        id="country-boundaries"
+        type="fill"
+        source-layer="country_boundaries"
+        paint={{
+          "fill-color": "#d2361e",
+          "fill-opacity": 0.4,
+        }}
+        filter={["in", "iso_3166_1", isoCode]}
+      />
+    </Source>
+  );
 
   return (
     <>
@@ -108,13 +140,59 @@ const Home: NextPage<IHomeProps> = ({
             </h1>
           </header>
           <div className="flex flex-grow flex-col">
-            <div className="relative">
-              {completed && (
-                <div className="absolute top-0 bottom-0 left-0 right-0 flex text-center justify-center items-center uppercase font-bold text-5xl text-slate-900 dark:text-slate-50">
-                  {targetCountry}
-                </div>
-              )}
-              <div dangerouslySetInnerHTML={{ __html: countrySVG }} />
+            <div style={{ height: "300px", position: "relative" }}>
+              <div
+                className={`absolute z-0 top-0 left-0 right-0 bottom-0 ${
+                  !completed ? "invisible" : ""
+                }`}
+              >
+                <Map
+                  style={{ width: "100%", height: 300 }}
+                  initialViewState={{
+                    bounds: [
+                      maxLongitude, // west
+                      maxLatitude, // south
+                      minLongitude, // east
+                      minLatitude, // north
+                    ],
+                    fitBoundsOptions: {
+                      padding: 30,
+                    },
+                  }}
+                  interactive
+                  attributionControl={false}
+                  mapStyle={mapStylesWithCountries}
+                  mapboxAccessToken={MAPBOX_TOKEN}
+                >
+                  {countryHighlight}
+                </Map>
+              </div>
+              <div
+                className={`absolute z-0 top-0 left-0 right-0 bottom-0 ${
+                  completed ? "invisible" : ""
+                }`}
+              >
+                <Map
+                  style={{ width: "100%", height: 300 }}
+                  initialViewState={{
+                    bounds: [
+                      maxLongitude, // west
+                      maxLatitude, // south
+                      minLongitude, // east
+                      minLatitude, // north
+                    ],
+                    fitBoundsOptions: {
+                      padding: 30,
+                    },
+                  }}
+                  interactive={false}
+                  attributionControl={false}
+                  mapStyle={mapStylesNoCountries}
+                  mapboxAccessToken={MAPBOX_TOKEN}
+                >
+                  {countryHighlight}
+                </Map>
+              </div>
             </div>
             <div className="grid grid-cols-7 gap-1 text-center my-2">
               {guesses.map((g, i) =>
@@ -142,11 +220,22 @@ const Home: NextPage<IHomeProps> = ({
               )}
             </div>
             {completed ? (
-              <div
-                onClick={onShare}
-                className="h-10 bg-blue-300 dark:bg-blue-900 flex items-center justify-center rounded cursor-pointer"
-              >
-                Share
+              <div className="grid grid-cols-3 gap-1">
+                <div className="col-span-2 h-10 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                  <div className="w-7 mr-2">
+                    <img
+                      className="w-7"
+                      src={`https://flagcdn.com/${isoCode.toLowerCase()}.svg`}
+                    />
+                  </div>
+                  {countryName}
+                </div>
+                <div
+                  onClick={onShare}
+                  className="col-span-1 h-10 bg-blue-300 dark:bg-blue-900 flex items-center justify-center rounded cursor-pointer"
+                >
+                  Share
+                </div>
               </div>
             ) : (
               <Select
