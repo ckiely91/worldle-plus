@@ -1913,17 +1913,6 @@
     "Longitude": -74.42212,
     "Name": "Peru"
   },
-  "PF": {
-    "longitude": "140 00 W",
-    "latitude": "15 00 S",
-    "MinLongitude": 180,
-    "MinLatitude": -27.916668,
-    "MaxLongitude": -179.8,
-    "MaxLatitude": 16.633333,
-    "Latitude": -17.648123,
-    "Longitude": -149.46472,
-    "Name": "French Polynesia"
-  },
   "PG": {
     "longitude": "147 00 E",
     "latitude": "6 00 S",

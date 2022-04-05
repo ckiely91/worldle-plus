@@ -15,6 +15,10 @@ type countryData struct {
 	Name string
 }
 
+var countryBlacklist = map[string]struct{}{
+	"PF": {},
+}
+
 func main() {
 	query := gountries.New()
 	allCountries := query.FindAllCountries()
@@ -22,6 +26,10 @@ func main() {
 	allCountryCodes := []string{}
 	data := map[string]countryData{}
 	for _, c := range allCountries {
+		if _, ok := countryBlacklist[c.Alpha2]; ok {
+			continue
+		}
+
 		allCountryCodes = append(allCountryCodes, c.Alpha2)
 		data[c.Alpha2] = countryData{
 			Name:        c.Name.Common,
