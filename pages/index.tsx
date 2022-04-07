@@ -5,10 +5,16 @@ import {
   getCountryMetadata,
   getTodaysCountry,
 } from "../funcs/countries";
-import { Fragment, useEffect, useState } from "react";
+import { FC, Fragment, useEffect, useState } from "react";
 import Select from "react-select";
 import { getStoredData, Guess, setStoredData } from "../funcs/storage";
-import { Layer, Map, Source } from "react-map-gl";
+import {
+  FullscreenControl,
+  Layer,
+  LngLatBoundsLike,
+  Map,
+  Source,
+} from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 interface IHomeProps {
@@ -26,6 +32,50 @@ const mapStylesNoCountries =
   "mapbox://styles/ckiely91/cl1legsxf000716o09f0weaf6";
 const mapStylesWithCountries =
   "mapbox://styles/ckiely91/cl1lixt8i000c16o0bilin9z7";
+
+interface IWorldleMap {
+  mapStyle: string;
+  interactive: boolean;
+  bounds: LngLatBoundsLike;
+  isoCode: string;
+  showFullscreenControl: boolean;
+}
+
+const WorldleMap: FC<IWorldleMap> = ({
+  mapStyle,
+  interactive,
+  bounds,
+  isoCode,
+  showFullscreenControl,
+}) => (
+  <Map
+    style={{ width: "100%", height: 300 }}
+    initialViewState={{
+      bounds,
+      fitBoundsOptions: {
+        padding: 30,
+      },
+    }}
+    interactive={interactive}
+    attributionControl={false}
+    mapStyle={mapStyle}
+    mapboxAccessToken={MAPBOX_TOKEN}
+  >
+    <Source type="vector" url="mapbox://mapbox.country-boundaries-v1">
+      <Layer
+        id="country-boundaries"
+        type="fill"
+        source-layer="country_boundaries"
+        paint={{
+          "fill-color": "#d2361e",
+          "fill-opacity": 0.4,
+        }}
+        filter={["in", "iso_3166_1", isoCode]}
+      />
+    </Source>
+    {showFullscreenControl && <FullscreenControl position="bottom-right" />}
+  </Map>
+);
 
 const Home: NextPage<IHomeProps> = ({
   targetCountry,
@@ -111,21 +161,6 @@ const Home: NextPage<IHomeProps> = ({
     }
   }
 
-  const countryHighlight = (
-    <Source type="vector" url="mapbox://mapbox.country-boundaries-v1">
-      <Layer
-        id="country-boundaries"
-        type="fill"
-        source-layer="country_boundaries"
-        paint={{
-          "fill-color": "#d2361e",
-          "fill-opacity": 0.4,
-        }}
-        filter={["in", "iso_3166_1", isoCode]}
-      />
-    </Source>
-  );
-
   return (
     <>
       <Head>
@@ -134,7 +169,7 @@ const Home: NextPage<IHomeProps> = ({
       </Head>
       <div className="flex justify-center flex-auto dark:bg-slate-900 dark:text-slate-50">
         <div className="w-full max-w-lg flex flex-col">
-          <header className="flex px-3 border-b-2 border-gray-200 mb-2">
+          <header className="flex px-3 border-b-2 border-gray-200">
             <h1 className="text-4xl font-bold uppercase tracking-wide text-center my-1 flex-auto">
               Worldle+
             </h1>
@@ -146,55 +181,39 @@ const Home: NextPage<IHomeProps> = ({
                   !completed ? "invisible" : ""
                 }`}
               >
-                <Map
-                  style={{ width: "100%", height: 300 }}
-                  initialViewState={{
-                    bounds: [
-                      maxLongitude, // west
-                      maxLatitude, // south
-                      minLongitude, // east
-                      minLatitude, // north
-                    ],
-                    fitBoundsOptions: {
-                      padding: 30,
-                    },
-                  }}
-                  interactive
-                  attributionControl={false}
+                <WorldleMap
                   mapStyle={mapStylesWithCountries}
-                  mapboxAccessToken={MAPBOX_TOKEN}
-                >
-                  {countryHighlight}
-                </Map>
+                  interactive={true}
+                  bounds={[
+                    maxLongitude, // west
+                    maxLatitude, // south
+                    minLongitude, // east
+                    minLatitude, // north
+                  ]}
+                  isoCode={isoCode}
+                  showFullscreenControl={true}
+                />
               </div>
               <div
                 className={`absolute z-0 top-0 left-0 right-0 bottom-0 ${
                   completed ? "invisible" : ""
                 }`}
               >
-                <Map
-                  style={{ width: "100%", height: 300 }}
-                  initialViewState={{
-                    bounds: [
-                      maxLongitude, // west
-                      maxLatitude, // south
-                      minLongitude, // east
-                      minLatitude, // north
-                    ],
-                    fitBoundsOptions: {
-                      padding: 30,
-                    },
-                  }}
-                  interactive={false}
-                  attributionControl={false}
+                <WorldleMap
                   mapStyle={mapStylesNoCountries}
-                  mapboxAccessToken={MAPBOX_TOKEN}
-                >
-                  {countryHighlight}
-                </Map>
+                  interactive={false}
+                  bounds={[
+                    maxLongitude, // west
+                    maxLatitude, // south
+                    minLongitude, // east
+                    minLatitude, // north
+                  ]}
+                  isoCode={isoCode}
+                  showFullscreenControl={false}
+                />
               </div>
             </div>
-            <div className="grid grid-cols-7 gap-1 text-center my-2">
+            <div className="grid grid-cols-7 gap-1 text-center my-2 mx-1">
               {guesses.map((g, i) =>
                 g ? (
                   <Fragment key={i}>
@@ -219,54 +238,55 @@ const Home: NextPage<IHomeProps> = ({
                 )
               )}
             </div>
-            {completed ? (
-              <div className="grid grid-cols-3 gap-1">
-                <div className="col-span-2 h-10 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                  <div className="w-7 mr-2">
+            <div className="mx-1">
+              {completed ? (
+                <div className="grid grid-cols-7 gap-1">
+                  <div className="col-span-1 h-10 bg-gray-100 dark:bg-slate-700 px-1 flex items-center justify-center">
                     <img
-                      className="w-7"
                       src={`https://flagcdn.com/${isoCode.toLowerCase()}.svg`}
                     />
                   </div>
-                  {countryName}
+                  <div className="col-span-4 h-10 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                    {countryName}
+                  </div>
+                  <div
+                    onClick={onShare}
+                    className="col-span-2 h-10 bg-blue-300 dark:bg-blue-900 flex items-center justify-center rounded cursor-pointer"
+                  >
+                    Share
+                  </div>
                 </div>
-                <div
-                  onClick={onShare}
-                  className="col-span-1 h-10 bg-blue-300 dark:bg-blue-900 flex items-center justify-center rounded cursor-pointer"
-                >
-                  Share
-                </div>
-              </div>
-            ) : (
-              <Select
-                instanceId="country_select"
-                className="country-select-container"
-                classNamePrefix="country-select"
-                options={options}
-                onChange={(newValue) => makeGuess(newValue?.value || "")}
-                isDisabled={completed}
-                controlShouldRenderValue={false}
-                isSearchable
-                placeholder="Start typing a country name..."
-                menuPlacement="top"
-                openMenuOnClick={false}
-                formatOptionLabel={(opt) => {
-                  return (
-                    <>
-                      <div className="w-5 mr-2">
-                        {opt.countryCode && (
-                          <img
-                            className="w-5"
-                            src={`https://flagcdn.com/${opt.countryCode.toLowerCase()}.svg`}
-                          />
-                        )}
-                      </div>
-                      {opt.label}
-                    </>
-                  );
-                }}
-              />
-            )}
+              ) : (
+                <Select
+                  instanceId="country_select"
+                  className="country-select-container"
+                  classNamePrefix="country-select"
+                  options={options}
+                  onChange={(newValue) => makeGuess(newValue?.value || "")}
+                  isDisabled={completed}
+                  controlShouldRenderValue={false}
+                  isSearchable
+                  placeholder="Start typing a country name..."
+                  menuPlacement="top"
+                  openMenuOnClick={false}
+                  formatOptionLabel={(opt) => {
+                    return (
+                      <>
+                        <div className="w-5 mr-2">
+                          {opt.countryCode && (
+                            <img
+                              className="w-5"
+                              src={`https://flagcdn.com/${opt.countryCode.toLowerCase()}.svg`}
+                            />
+                          )}
+                        </div>
+                        {opt.label}
+                      </>
+                    );
+                  }}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -15,17 +15,8 @@ body {
   box-sizing: border-box;
 }
 
-.country-svg {
-  width: 100%;
-  @apply bg-blue-200 dark:bg-blue-700;
-}
-
-.country-svg .main-country {
-  @apply fill-orange-500 stroke-orange-500 dark:fill-indigo-900 dark:stroke-indigo-900 stroke-2;
-}
-
-.country-svg .neighbour {
-  @apply fill-orange-200 stroke-orange-500 dark:fill-indigo-600 dark:stroke-indigo-900 stroke-2;
+.mapboxgl-ctrl-logo {
+  display: none !important;
 }
 
 @layer components {
