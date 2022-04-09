@@ -7,6 +7,7 @@ export interface Guess {
 
 export interface StoredData {
   targetCountry: string;
+  bonusGuess?: string;
   guesses: (Guess | null)[];
 }
 

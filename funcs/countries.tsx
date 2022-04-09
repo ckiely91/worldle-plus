@@ -2,6 +2,8 @@ import { geoDistance } from "d3-geo";
 import countryList from "../data/countryList.json";
 import { DateTime, Interval } from "luxon";
 import countriesJSON from "../data/countries.json";
+import { calculateBearing, getRandomSample } from "./util";
+import shuffle from "lodash/shuffle";
 
 const countries = countriesJSON as Record<
   string,
@@ -17,6 +19,7 @@ const countries = countriesJSON as Record<
 >;
 
 const earthRadiusKm = 6371;
+const randomFlagCountries = 6;
 
 interface countryAndDistance {
   countryName: string;
@@ -35,13 +38,31 @@ export interface CountryMetadata {
   minLongitude: number;
   maxLongitude: number;
   countriesAndDistances: countryAndDistance[];
+  countriesForFlags: string[];
 }
 
-export const getCountryMetadata = (countryCode: string): CountryMetadata => {
+export const getCountryMetadata = (
+  countryCode: string,
+  randomSeed: number
+): CountryMetadata => {
   const targetCountry = countries[countryCode];
   if (!targetCountry) {
     throw new Error("Target country not found");
   }
+
+  // Get a random selection of countries to show flags for
+  const allOtherCountryCodes = Object.keys(countries).filter(
+    (c) => c !== countryCode
+  );
+  let countriesForFlags = getRandomSample(
+    allOtherCountryCodes,
+    randomFlagCountries - 1,
+    randomSeed.toString()
+  );
+
+  // Add in the target country code and give it a shuffle
+  countriesForFlags.push(countryCode);
+  countriesForFlags = shuffle(countriesForFlags);
 
   const data: CountryMetadata = {
     countryName: targetCountry.Name,
@@ -52,6 +73,7 @@ export const getCountryMetadata = (countryCode: string): CountryMetadata => {
     maxLatitude: targetCountry.MaxLatitude,
     minLongitude: targetCountry.MinLongitude,
     maxLongitude: targetCountry.MaxLongitude,
+    countriesForFlags,
     countriesAndDistances: [],
   };
 
@@ -90,31 +112,3 @@ export const getTodaysCountry = (): [string, number] => {
 
   return [countryList[numDays % countryList.length], numDays + 1];
 };
-
-function toRadians(degrees: number) {
-  return (degrees * Math.PI) / 180;
-}
-
-function toDegrees(radians: number) {
-  return (radians * 180) / Math.PI;
-}
-
-function calculateBearing(
-  startLat: number,
-  startLng: number,
-  destLat: number,
-  destLng: number
-) {
-  startLat = toRadians(startLat);
-  startLng = toRadians(startLng);
-  destLat = toRadians(destLat);
-  destLng = toRadians(destLng);
-
-  const y = Math.sin(destLng - startLng) * Math.cos(destLat);
-  const x =
-    Math.cos(startLat) * Math.sin(destLat) -
-    Math.sin(startLat) * Math.cos(destLat) * Math.cos(destLng - startLng);
-  let brng = Math.atan2(y, x);
-  brng = toDegrees(brng);
-  return (brng + 360) % 360;
-}

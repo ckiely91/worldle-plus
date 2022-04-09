@@ -8,13 +8,7 @@ import {
 import { FC, Fragment, useEffect, useState } from "react";
 import Select from "react-select";
 import { getStoredData, Guess, setStoredData } from "../funcs/storage";
-import {
-  FullscreenControl,
-  Layer,
-  LngLatBoundsLike,
-  Map,
-  Source,
-} from "react-map-gl";
+import { Layer, LngLatBoundsLike, Map, Source } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 interface IHomeProps {
@@ -38,7 +32,6 @@ interface IWorldleMap {
   interactive: boolean;
   bounds: LngLatBoundsLike;
   isoCode: string;
-  showFullscreenControl: boolean;
 }
 
 const WorldleMap: FC<IWorldleMap> = ({
@@ -46,7 +39,6 @@ const WorldleMap: FC<IWorldleMap> = ({
   interactive,
   bounds,
   isoCode,
-  showFullscreenControl,
 }) => (
   <Map
     style={{ width: "100%", height: 300 }}
@@ -73,7 +65,6 @@ const WorldleMap: FC<IWorldleMap> = ({
         filter={["in", "iso_3166_1", isoCode]}
       />
     </Source>
-    {showFullscreenControl && <FullscreenControl position="bottom-right" />}
   </Map>
 );
 
@@ -90,17 +81,20 @@ const Home: NextPage<IHomeProps> = ({
     maxLatitude,
     minLongitude,
     maxLongitude,
+    countriesForFlags,
   },
 }) => {
   const [guesses, setGuesses] = useState<(Guess | null)[]>(() =>
     new Array(numGuessesAllowed).fill(null)
   );
+  const [bonusGuess, setBonusGuess] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     // See if we have any data in local storage when we first mount
     const storedData = getStoredData();
     if (storedData && storedData.targetCountry === targetCountry) {
       setGuesses(storedData.guesses);
+      setBonusGuess(storedData.bonusGuess);
     }
   }, [targetCountry]);
 
@@ -137,8 +131,24 @@ const Home: NextPage<IHomeProps> = ({
     });
   };
 
+  const makeBonusGuess = (guessedCountryCode: string) => {
+    setBonusGuess(guessedCountryCode);
+    // Update local storage
+    setStoredData({
+      targetCountry,
+      guesses: guesses,
+      bonusGuess: guessedCountryCode,
+    });
+  };
+
   const onShare = () => {
-    const shareText = getShareText(worldleNumber, numGuesses, correct, guesses);
+    const shareText = getShareText(
+      worldleNumber,
+      numGuesses,
+      correct,
+      bonusGuess === isoCode,
+      guesses
+    );
     if (typeof navigator.share === "function") {
       navigator.share({
         text: shareText,
@@ -174,7 +184,7 @@ const Home: NextPage<IHomeProps> = ({
               Worldle+
             </h1>
           </header>
-          <div className="flex flex-grow flex-col">
+          <div className="flex flex-grow flex-col relative">
             <div style={{ height: "300px", position: "relative" }}>
               <div
                 className={`absolute z-0 top-0 left-0 right-0 bottom-0 ${
@@ -191,7 +201,6 @@ const Home: NextPage<IHomeProps> = ({
                     minLatitude, // north
                   ]}
                   isoCode={isoCode}
-                  showFullscreenControl={true}
                 />
               </div>
               <div
@@ -209,84 +218,125 @@ const Home: NextPage<IHomeProps> = ({
                     minLatitude, // north
                   ]}
                   isoCode={isoCode}
-                  showFullscreenControl={false}
                 />
               </div>
             </div>
-            <div className="grid grid-cols-7 gap-1 text-center my-2 mx-1">
-              {guesses.map((g, i) =>
-                g ? (
-                  <Fragment key={i}>
-                    <div className="col-span-3 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                      {g.country}
-                    </div>
-                    <div className="col-span-2 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                      {g.distanceKm}km
-                    </div>
-                    <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                      {!g.correct && getBearingDir(g.bearingDeg)[1]}
-                    </div>
-                    <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                      {g.correct ? "🎉" : <>{getDistPct(g.distanceKm)}%</>}
-                    </div>
-                  </Fragment>
-                ) : (
-                  <div
-                    key={i}
-                    className="col-span-7 h-8 bg-gray-200 dark:bg-slate-600"
-                  />
-                )
-              )}
-            </div>
-            <div className="mx-1">
-              {completed ? (
-                <div className="grid grid-cols-7 gap-1">
-                  <div className="col-span-1 h-10 bg-gray-100 dark:bg-slate-700 px-1 flex items-center justify-center">
-                    <img
-                      src={`https://flagcdn.com/${isoCode.toLowerCase()}.svg`}
+            {completed && bonusGuess === undefined ? (
+              <div className="mt-3 mx-1 flex flex-col items-center">
+                <h1 className="text-2xl font-bold">Bonus round</h1>
+                <h2 className="text-xl mt-1">
+                  Select the correct flag for <strong>{countryName}</strong>
+                </h2>
+                <div className="grid grid-cols-2 gap-5 mt-3 self-stretch">
+                  {countriesForFlags.map((c) => (
+                    <div
+                      key={c}
+                      onClick={() => makeBonusGuess(c)}
+                      className="h-44 bg-center bg-contain bg-no-repeat"
+                      style={{
+                        backgroundImage: `url(https://flagcdn.com/${c.toLowerCase()}.svg)`,
+                      }}
                     />
-                  </div>
-                  <div className="col-span-4 h-10 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                    {countryName}
-                  </div>
-                  <div
-                    onClick={onShare}
-                    className="col-span-2 h-10 bg-blue-300 dark:bg-blue-900 flex items-center justify-center rounded cursor-pointer"
-                  >
-                    Share
-                  </div>
+                  ))}
                 </div>
-              ) : (
-                <Select
-                  instanceId="country_select"
-                  className="country-select-container"
-                  classNamePrefix="country-select"
-                  options={options}
-                  onChange={(newValue) => makeGuess(newValue?.value || "")}
-                  isDisabled={completed}
-                  controlShouldRenderValue={false}
-                  isSearchable
-                  placeholder="Start typing a country name..."
-                  menuPlacement="top"
-                  openMenuOnClick={false}
-                  formatOptionLabel={(opt) => {
-                    return (
-                      <>
-                        <div className="w-5 mr-2">
-                          {opt.countryCode && (
-                            <img
-                              className="w-5"
-                              src={`https://flagcdn.com/${opt.countryCode.toLowerCase()}.svg`}
-                            />
-                          )}
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-7 gap-1 text-center my-2 mx-1">
+                  {guesses.map((g, i) =>
+                    g ? (
+                      <Fragment key={i}>
+                        <div className="col-span-3 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                          {g.country}
                         </div>
-                        {opt.label}
-                      </>
-                    );
-                  }}
-                />
-              )}
-            </div>
+                        <div className="col-span-2 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                          {g.distanceKm}km
+                        </div>
+                        <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                          {!g.correct && getBearingDir(g.bearingDeg)[1]}
+                        </div>
+                        <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                          {g.correct ? "🎉" : <>{getDistPct(g.distanceKm)}%</>}
+                        </div>
+                      </Fragment>
+                    ) : (
+                      <div
+                        key={i}
+                        className="col-span-7 h-8 bg-gray-200 dark:bg-slate-600"
+                      />
+                    )
+                  )}
+                  {completed && (
+                    <>
+                      <div className="col-span-5 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                        Bonus round: Flag selected
+                      </div>
+                      <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                        {bonusGuess && (
+                          <img
+                            className="h-7"
+                            src={`https://flagcdn.com/${bonusGuess.toLowerCase()}.svg`}
+                          />
+                        )}
+                      </div>
+                      <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                        {bonusGuess === isoCode ? "✅" : "❌"}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="mx-1">
+                  {completed ? (
+                    <div className="grid grid-cols-7 gap-1">
+                      <div className="col-span-1 h-10 bg-gray-100 dark:bg-slate-700 px-1 flex items-center justify-center">
+                        <img
+                          className="h-9"
+                          src={`https://flagcdn.com/${isoCode.toLowerCase()}.svg`}
+                        />
+                      </div>
+                      <div className="col-span-4 h-10 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                        {countryName}
+                      </div>
+                      <div
+                        onClick={onShare}
+                        className="col-span-2 h-10 bg-blue-300 dark:bg-blue-900 flex items-center justify-center rounded cursor-pointer"
+                      >
+                        Share
+                      </div>
+                    </div>
+                  ) : (
+                    <Select
+                      instanceId="country_select"
+                      className="country-select-container"
+                      classNamePrefix="country-select"
+                      options={options}
+                      onChange={(newValue) => makeGuess(newValue?.value || "")}
+                      isDisabled={completed}
+                      controlShouldRenderValue={false}
+                      isSearchable
+                      placeholder="Start typing a country name..."
+                      menuPlacement="top"
+                      openMenuOnClick={false}
+                      formatOptionLabel={(opt) => {
+                        return (
+                          <>
+                            <div className="w-5 mr-2">
+                              {opt.countryCode && (
+                                <img
+                                  className="w-5"
+                                  src={`https://flagcdn.com/${opt.countryCode.toLowerCase()}.svg`}
+                                />
+                              )}
+                            </div>
+                            {opt.label}
+                          </>
+                        );
+                      }}
+                    />
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -298,10 +348,11 @@ const getShareText = (
   worldleNumber: number,
   numGuesses: number,
   correct: boolean,
+  bonusRoundCorrect: boolean,
   guesses: (Guess | null)[]
 ): string => {
-  let firstLine = `#Worldle+ #${worldleNumber} ${
-    correct ? numGuesses : "X"
+  let firstLine = `#Worldle+ #${worldleNumber} ${correct ? numGuesses : "X"}${
+    bonusRoundCorrect ? "+" : ""
   }/${numGuessesAllowed}`;
   let str = "";
 
@@ -345,7 +396,8 @@ const getShareText = (
     firstLine += ` ${highestPct}%`;
   }
   str = firstLine + str;
-  str += "\nhttps://worldle.acrofever.com";
+  str += `\nBonus round: ${bonusRoundCorrect ? "✅" : "❌"}`;
+  str += "\n\nhttps://worldle.acrofever.com";
 
   return str;
 };
@@ -378,7 +430,7 @@ const getDistPct = (distanceKm: number) => {
 
 export const getStaticProps: GetStaticProps<IHomeProps> = async (context) => {
   const [targetCountry, worldleNumber] = getTodaysCountry();
-  const countryMetadata = getCountryMetadata(targetCountry);
+  const countryMetadata = getCountryMetadata(targetCountry, worldleNumber);
 
   return {
     props: {
