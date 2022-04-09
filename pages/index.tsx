@@ -317,21 +317,6 @@ const Home: NextPage<IHomeProps> = ({
                       placeholder="Start typing a country name..."
                       menuPlacement="top"
                       openMenuOnClick={false}
-                      formatOptionLabel={(opt) => {
-                        return (
-                          <>
-                            <div className="w-5 mr-2">
-                              {opt.countryCode && (
-                                <img
-                                  className="w-5"
-                                  src={`https://flagcdn.com/${opt.countryCode.toLowerCase()}.svg`}
-                                />
-                              )}
-                            </div>
-                            {opt.label}
-                          </>
-                        );
-                      }}
                     />
                   )}
                 </div>
