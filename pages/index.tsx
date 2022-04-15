@@ -7,7 +7,12 @@ import {
 } from "../funcs/countries";
 import { FC, Fragment, useEffect, useState } from "react";
 import Select from "react-select";
-import { getStoredData, Guess, setStoredData } from "../funcs/storage";
+import {
+  getTodaysData,
+  Guess,
+  setTodaysData,
+  updateStatsData,
+} from "../funcs/storage";
 import { Layer, LngLatBoundsLike, Map, Source } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -91,7 +96,7 @@ const Home: NextPage<IHomeProps> = ({
 
   useEffect(() => {
     // See if we have any data in local storage when we first mount
-    const storedData = getStoredData();
+    const storedData = getTodaysData();
     if (storedData && storedData.targetCountry === targetCountry) {
       setGuesses(storedData.guesses);
       setBonusGuess(storedData.bonusGuess);
@@ -125,7 +130,7 @@ const Home: NextPage<IHomeProps> = ({
     setGuesses(newGuesses);
 
     // Update local storage
-    setStoredData({
+    setTodaysData({
       targetCountry,
       guesses: newGuesses,
     });
@@ -134,11 +139,12 @@ const Home: NextPage<IHomeProps> = ({
   const makeBonusGuess = (guessedCountryCode: string) => {
     setBonusGuess(guessedCountryCode);
     // Update local storage
-    setStoredData({
+    setTodaysData({
       targetCountry,
       guesses: guesses,
       bonusGuess: guessedCountryCode,
     });
+    updateStatsData(correct, numGuesses, guessedCountryCode === isoCode);
   };
 
   const onShare = () => {
@@ -173,158 +179,143 @@ const Home: NextPage<IHomeProps> = ({
 
   return (
     <>
-      <Head>
-        <title>Worldle+</title>
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-      <div className="flex justify-center flex-auto dark:bg-slate-900 dark:text-slate-50">
-        <div className="w-full max-w-lg flex flex-col">
-          <header className="flex px-3 border-b-2 border-gray-200">
-            <h1 className="text-4xl font-bold uppercase tracking-wide text-center my-1 flex-auto">
-              Worldle+
-            </h1>
-          </header>
-          <div className="flex flex-grow flex-col relative">
-            <div style={{ height: "300px", position: "relative" }}>
+      <div style={{ height: "300px", position: "relative" }}>
+        <div
+          className={`absolute z-0 top-0 left-0 right-0 bottom-0 ${
+            !completed ? "invisible" : ""
+          }`}
+        >
+          <WorldleMap
+            mapStyle={mapStylesWithCountries}
+            interactive={true}
+            bounds={[
+              maxLongitude, // west
+              maxLatitude, // south
+              minLongitude, // east
+              minLatitude, // north
+            ]}
+            isoCode={isoCode}
+          />
+        </div>
+        <div
+          className={`absolute z-0 top-0 left-0 right-0 bottom-0 ${
+            completed ? "invisible" : ""
+          }`}
+        >
+          <WorldleMap
+            mapStyle={mapStylesNoCountries}
+            interactive={false}
+            bounds={[
+              maxLongitude, // west
+              maxLatitude, // south
+              minLongitude, // east
+              minLatitude, // north
+            ]}
+            isoCode={isoCode}
+          />
+        </div>
+      </div>
+      {completed && bonusGuess === undefined ? (
+        <div className="mt-3 mx-1 flex flex-col items-center">
+          <h1 className="text-2xl font-bold">Bonus round</h1>
+          <h2 className="text-xl mt-1">
+            Select the correct flag for <strong>{countryName}</strong>
+          </h2>
+          <div className="grid grid-cols-2 gap-5 mt-3 self-stretch">
+            {countriesForFlags.map((c) => (
               <div
-                className={`absolute z-0 top-0 left-0 right-0 bottom-0 ${
-                  !completed ? "invisible" : ""
-                }`}
-              >
-                <WorldleMap
-                  mapStyle={mapStylesWithCountries}
-                  interactive={true}
-                  bounds={[
-                    maxLongitude, // west
-                    maxLatitude, // south
-                    minLongitude, // east
-                    minLatitude, // north
-                  ]}
-                  isoCode={isoCode}
+                key={c}
+                onClick={() => makeBonusGuess(c)}
+                className="h-44 bg-center bg-contain bg-no-repeat"
+                style={{
+                  backgroundImage: `url(https://flagcdn.com/${c.toLowerCase()}.svg)`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-7 gap-1 text-center my-2 mx-1">
+            {guesses.map((g, i) =>
+              g ? (
+                <Fragment key={i}>
+                  <div className="col-span-3 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                    {g.country}
+                  </div>
+                  <div className="col-span-2 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                    {g.distanceKm}km
+                  </div>
+                  <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                    {!g.correct && getBearingDir(g.bearingDeg)[1]}
+                  </div>
+                  <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                    {g.correct ? "🎉" : <>{getDistPct(g.distanceKm)}%</>}
+                  </div>
+                </Fragment>
+              ) : (
+                <div
+                  key={i}
+                  className="col-span-7 h-8 bg-gray-200 dark:bg-slate-600"
                 />
-              </div>
-              <div
-                className={`absolute z-0 top-0 left-0 right-0 bottom-0 ${
-                  completed ? "invisible" : ""
-                }`}
-              >
-                <WorldleMap
-                  mapStyle={mapStylesNoCountries}
-                  interactive={false}
-                  bounds={[
-                    maxLongitude, // west
-                    maxLatitude, // south
-                    minLongitude, // east
-                    minLatitude, // north
-                  ]}
-                  isoCode={isoCode}
-                />
-              </div>
-            </div>
-            {completed && bonusGuess === undefined ? (
-              <div className="mt-3 mx-1 flex flex-col items-center">
-                <h1 className="text-2xl font-bold">Bonus round</h1>
-                <h2 className="text-xl mt-1">
-                  Select the correct flag for <strong>{countryName}</strong>
-                </h2>
-                <div className="grid grid-cols-2 gap-5 mt-3 self-stretch">
-                  {countriesForFlags.map((c) => (
-                    <div
-                      key={c}
-                      onClick={() => makeBonusGuess(c)}
-                      className="h-44 bg-center bg-contain bg-no-repeat"
-                      style={{
-                        backgroundImage: `url(https://flagcdn.com/${c.toLowerCase()}.svg)`,
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : (
+              )
+            )}
+            {completed && (
               <>
-                <div className="grid grid-cols-7 gap-1 text-center my-2 mx-1">
-                  {guesses.map((g, i) =>
-                    g ? (
-                      <Fragment key={i}>
-                        <div className="col-span-3 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                          {g.country}
-                        </div>
-                        <div className="col-span-2 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                          {g.distanceKm}km
-                        </div>
-                        <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                          {!g.correct && getBearingDir(g.bearingDeg)[1]}
-                        </div>
-                        <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                          {g.correct ? "🎉" : <>{getDistPct(g.distanceKm)}%</>}
-                        </div>
-                      </Fragment>
-                    ) : (
-                      <div
-                        key={i}
-                        className="col-span-7 h-8 bg-gray-200 dark:bg-slate-600"
-                      />
-                    )
-                  )}
-                  {completed && (
-                    <>
-                      <div className="col-span-5 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                        Bonus round: Flag selected
-                      </div>
-                      <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                        {bonusGuess && (
-                          <img
-                            className="h-7"
-                            src={`https://flagcdn.com/${bonusGuess.toLowerCase()}.svg`}
-                          />
-                        )}
-                      </div>
-                      <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                        {bonusGuess === isoCode ? "✅" : "❌"}
-                      </div>
-                    </>
-                  )}
+                <div className="col-span-5 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                  Bonus round: Flag selected
                 </div>
-                <div className="mx-1">
-                  {completed ? (
-                    <div className="grid grid-cols-7 gap-1">
-                      <div className="col-span-1 h-10 bg-gray-100 dark:bg-slate-700 px-1 flex items-center justify-center">
-                        <img
-                          className="h-9"
-                          src={`https://flagcdn.com/${isoCode.toLowerCase()}.svg`}
-                        />
-                      </div>
-                      <div className="col-span-4 h-10 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                        {countryName}
-                      </div>
-                      <div
-                        onClick={onShare}
-                        className="col-span-2 h-10 bg-blue-300 dark:bg-blue-900 flex items-center justify-center rounded cursor-pointer"
-                      >
-                        Share
-                      </div>
-                    </div>
-                  ) : (
-                    <Select
-                      instanceId="country_select"
-                      className="country-select-container"
-                      classNamePrefix="country-select"
-                      options={options}
-                      onChange={(newValue) => makeGuess(newValue?.value || "")}
-                      isDisabled={completed}
-                      controlShouldRenderValue={false}
-                      isSearchable
-                      placeholder="Start typing a country name..."
-                      menuPlacement="top"
-                      openMenuOnClick={false}
+                <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                  {bonusGuess && (
+                    <img
+                      className="h-7"
+                      src={`https://flagcdn.com/${bonusGuess.toLowerCase()}.svg`}
                     />
                   )}
+                </div>
+                <div className="col-span-1 h-8 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                  {bonusGuess === isoCode ? "✅" : "❌"}
                 </div>
               </>
             )}
           </div>
-        </div>
-      </div>
+          <div className="mx-1">
+            {completed ? (
+              <div className="grid grid-cols-7 gap-1">
+                <div className="col-span-1 h-10 bg-gray-100 dark:bg-slate-700 px-1 flex items-center justify-center">
+                  <img
+                    className="h-9"
+                    src={`https://flagcdn.com/${isoCode.toLowerCase()}.svg`}
+                  />
+                </div>
+                <div className="col-span-4 h-10 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                  {countryName}
+                </div>
+                <div
+                  onClick={onShare}
+                  className="col-span-2 h-10 bg-blue-300 dark:bg-blue-900 flex items-center justify-center rounded cursor-pointer"
+                >
+                  Share
+                </div>
+              </div>
+            ) : (
+              <Select
+                instanceId="country_select"
+                className="country-select-container"
+                classNamePrefix="country-select"
+                options={options}
+                onChange={(newValue) => makeGuess(newValue?.value || "")}
+                isDisabled={completed}
+                controlShouldRenderValue={false}
+                isSearchable
+                placeholder="Start typing a country name..."
+                menuPlacement="top"
+                openMenuOnClick={false}
+              />
+            )}
+          </div>
+        </>
+      )}
     </>
   );
 };
